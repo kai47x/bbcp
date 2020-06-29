@@ -8,9 +8,12 @@ INCDIR ?= /usr/include
 
 PY = python2.7
 
-DEFS = clockspersec defs-map defs-prot defs-sigmask nsig defs-signo defs-fpe defs-sa defs-errno namemax defs-fcntlo defs-basictypes defs-sc defs-clockid
+DEFS = clockspersec defs-map defs-prot defs-sigmask nsig defs-signo defs-fpe defs-sa defs-errno namemax defs-fcntlo defs-basictypes defs-sc defs-clockid defs-wait
 
-all: Libc.txt ${DEFS} strerrnocase.txt
+all: Libc.odc ${DEFS} strerrnocase.txt
+
+Libc.odc: Libc.txt
+	./txt2odc.py Libc.txt Libc.odc
 
 Libc.txt: Libc.txt.templ ${DEFS} libver osname machine custom fields-dirent fields-sigaction fields-siginfo fields-stack fields-stat fields-tm fields-ucontext fields-timespec
 	${PY} ./untempl.py Libc.txt.templ ${.TARGET}
@@ -71,6 +74,12 @@ defs-clockid:
 #	./dumpdefs.py 2 2 i ${INCDIR}/sys/siginfo.h | grep SEGV_ >> ${.TARGET}
 #	./dumpdefs.py 2 2 i ${INCDIR}/sys/siginfo.h | grep BUS_ >> ${.TARGET}
 
+defs-wait:
+	./dumpdefs.py 2 2 i ${INCDIR}/sys/wait.h | grep WAIT_ > ${.TARGET}
+	./dumpdefs.py 2 1 s ${INCDIR}/sys/wait.h | grep WCONTINUED | grep -v _WCONTINUED >> ${.TARGET}
+	./dumpdefs.py 2 1 s ${INCDIR}/sys/wait.h | grep WNOHANG >> ${.TARGET}
+	./dumpdefs.py 2 1 s ${INCDIR}/sys/wait.h | grep WUNTRACED >> ${.TARGET}
+
 dumpstrerrno.c: defs-errno
 	grep -v ERESTART ${.ALLSRC} | grep -v EJUSTRETURN | ./mkdumpstrerrno.py > ${.TARGET}
 
@@ -78,4 +87,4 @@ strerrnocase.txt: dumpstrerrno
 	./dumpstrerrno | ./mkstrerrnocase.py > ${.TARGET}
 
 clean:
-	rm -f ${DEFS} Libc.txt dumpstrerrno dumpstrerrno.c strerrnocase.txt sizeofs
+	rm -f ${DEFS} Libc.txt Libc.odc dumpstrerrno dumpstrerrno.c strerrnocase.txt sizeofs
